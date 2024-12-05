@@ -50,8 +50,8 @@ void display(GLFWwindow* window, double current_time) {
 	
 	glPointSize(30.0f);
 
-	// draw one point/vertex (starting from 0)
-	glDrawArrays(GL_POINTS, 0, 1);
+	// draw three vertices (a triangle) starting from vertex 0
+	glDrawArrays(GL_TRIANGLES, 0, 3);
 }
 
 GLuint glew_create_shader_program() {
