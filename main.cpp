@@ -4,6 +4,8 @@
 #include <iostream>
 #include <cstdlib> // EXIT_FAILURE | EXIT_SUCCESS
 #include <cstdint> // uint32_t
+#include <string>
+#include <fstream>
 
 
 /* ----------------------------------------------------------------- */
@@ -24,6 +26,8 @@ GLuint glew_create_shader_program();
 void print_shader_log(GLuint shader);
 void print_program_log(int program);
 bool check_opengl_error();
+
+std::string read_shader_source(const char* file_path);
 /* ----------------------------------------------------------------- */
 
 
@@ -56,16 +60,12 @@ GLuint glew_create_shader_program() {
 	GLint frag_compiled;
 	GLint shaders_linked;
 
-	const char* vert_shader_src =
-		"#version 450 \n"
-		"void main() \n"
-		"{ gl_Position = vec4(0.0, 0.0, 0.0, 1.0); }";
+	std::string vert_shader_str = read_shader_source("vert_shader.glsl");
+	std::string frag_shader_str = read_shader_source("frag_shader.glsl");
 
-	const char* frag_shader_src =
-		"version 450 \n"
-		"out vec4 color; \n"
-		"void main() \n"
-		"{ if(gl_FragCoord.x < 200) color = vec4(1.0, 0.0, 0.0, 1.0); else color = vec4(0.0, 0.0, 1.0, 1.0); }";
+	const char* vert_shader_src = vert_shader_str.c_str();
+
+	const char* frag_shader_src = frag_shader_str.c_str();
 
 	// Returns an index for referencing it later
 	GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
@@ -158,7 +158,22 @@ bool check_opengl_error() {
 	
 	return is_error;
 }
-/* ----------------------------------------------------------------- */
+
+std::string read_shader_source(const char* file_path) {
+
+	std::string line = "";
+	std::string file_content;
+	std::ifstream file_stream(file_path, std::ios::in);
+
+	while (!file_stream.eof()) {
+		std::getline(file_stream, line);
+		file_content.append(line + "\n");
+	}
+
+	file_stream.close();
+
+	return file_content;
+}
 
 
 int main() {
