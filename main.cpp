@@ -65,8 +65,9 @@ void display(GLFWwindow* window, double current_time) {
 
 	glUseProgram(glew_rendering_program);
 	
+	glPointSize(30.0f);
+
 	// draw one point/vertex (starting from 0)
-	// the default size of a point in OpenGL is one pixel
 	glDrawArrays(GL_POINTS, 0, 1);
 }
 /* ----------------------------------------------------------------- */
