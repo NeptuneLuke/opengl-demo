@@ -88,7 +88,7 @@ void init(GLFWwindow* window) {
 	// Setup camera position.
 	camera_x = 0.0f;
 	camera_y = 0.0f;
-	camera_z = 8.0f;
+	camera_z = 25.0f;
 
 	// Setup cube position.
 	cube_pos_x = 0.0f;
@@ -138,69 +138,77 @@ void display(GLFWwindow* window, double delta_time) {
 					glm::mat4(1.0f) /* identity matrix*/,
 					glm::vec3(-camera_x, -camera_y, -camera_z));
 
-	// We can add animation to the cube by building the model matrix
-	// using a varying translation and rotation based on the time.
-	// Translation on the left.
-	glm::mat4 translation_mat = 
-		glm::translate(
-			glm::mat4(1.0f),
-			glm::vec3(sin(0.35f * delta_time) * 2.0f,
-				      cos(0.52f * delta_time) * 2.0f,
-				      sin(0.7f * delta_time) * 2.0f));
 
-	// Rotation on the right.
-	// The 1.75 constant adjusts the rotation speed.
-	// Y axis rotation.
-	glm::mat4 rotation_mat = 
-		glm::rotate(
-			glm::mat4(1.0f),
-			1.75f * (float)delta_time,
-			glm::vec3(0.0f, 1.0f, 0.0f));
+	// Renders 24 copies of the same cube.
+	float time_factor = 1.0f;
+	for (int i = 0; i < 24; i++) {
+		
+		time_factor = delta_time + i;
+		// We can add animation to the cube by building the model matrix
+		// using a varying translation and rotation based on the time.
+		// Translation on the left.
+		glm::mat4 translation_mat =
+			glm::translate(
+				glm::mat4(1.0f),
+				glm::vec3(sin(0.35f * time_factor) * 8.0f,
+					cos(0.52f * time_factor) * 8.0f,
+					sin(0.7f * time_factor) * 8.0f));
+
+		// Rotation on the right.
+		// The 1.75 constant adjusts the rotation speed.
+		// Y axis rotation.
+		glm::mat4 rotation_mat =
+			glm::rotate(
+				glm::mat4(1.0f),
+				1.75f * (float)delta_time,
+				glm::vec3(0.0f, 1.0f, 0.0f));
+
+		// X axis rotation.
+		rotation_mat =
+			glm::rotate(rotation_mat,
+				1.75f * (float)delta_time,
+				glm::vec3(1.0f, 0.0f, 0.0f));
+
+		// Z axis rotation.
+		rotation_mat =
+			glm::rotate(rotation_mat,
+				1.75f * (float)delta_time,
+				glm::vec3(0.0f, 0.0f, 1.0f));
+
+		// The order of multiplication is significant!
+		// Try inverting the order and see the results!
+		// The computation of a vertex is right to left,
+		// meaning that the rotation is done first, and then the translation.
+		model_mat = translation_mat * rotation_mat;
+		/* model_mat = glm::translate(
+						glm::mat4(1.0f),
+						glm::vec3(cube_pos_x, cube_pos_y, cube_pos_z));
+		*/
+
+
+		modelview_mat = view_mat * model_mat;
+
+		// Copy perspective and model-view matrices to corresponding uniform variables
+		// in the GLSL shaders files.
+		glUniformMatrix4fv(modelview_loc, 1, GL_FALSE, glm::value_ptr(modelview_mat));
+		glUniformMatrix4fv(projection_loc, 1, GL_FALSE, glm::value_ptr(perspective_mat));
+
+		// Associate VBO with the corresponding vertex attribute in the vertex shader.
+		// Enables the buffer containing the cube vertices and attaches it to the
+		// 0th vertex attribute to prepare for sending the vertices to the shader.
+		glBindBuffer(GL_ARRAY_BUFFER, glew_vbo[0]);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(0);
+
+		// Adjust OpenGL settings to enable HSR with the specific
+		// depth testing to use.
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
+
+		// Draw triangles made of 36 vertices (the cube we created) starting from vertex 0.
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+	}
 	
-	// X axis rotation.
-	rotation_mat =
-		glm::rotate(rotation_mat,
-					1.75f * (float)delta_time,
-					glm::vec3(1.0f, 0.0f, 0.0f));
-	
-	// Z axis rotation.
-	rotation_mat =
-		glm::rotate(rotation_mat,
-			1.75f * (float)delta_time,
-			glm::vec3(0.0f, 0.0f, 1.0f));
-
-	// The order of multiplication is significant!
-	// Try inverting the order and see the results!
-	// The computation of a vertex is right to left,
-	// meaning that the rotation is done first, and then the translation.
-	model_mat = translation_mat * rotation_mat;
-	/* model_mat = glm::translate(
-					glm::mat4(1.0f),
-					glm::vec3(cube_pos_x, cube_pos_y, cube_pos_z));
-	*/
-
-
-	modelview_mat = view_mat * model_mat;
-
-	// Copy perspective and model-view matrices to corresponding uniform variables
-	// in the GLSL shaders files.
-	glUniformMatrix4fv(modelview_loc, 1, GL_FALSE, glm::value_ptr(modelview_mat));
-	glUniformMatrix4fv(projection_loc, 1, GL_FALSE, glm::value_ptr(perspective_mat));
-
-	// Associate VBO with the corresponding vertex attribute in the vertex shader.
-	// Enables the buffer containing the cube vertices and attaches it to the
-	// 0th vertex attribute to prepare for sending the vertices to the shader.
-	glBindBuffer(GL_ARRAY_BUFFER, glew_vbo[0]);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(0);
-
-	// Adjust OpenGL settings to enable HSR with the specific
-	// depth testing to use.
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);
-
-	// Draw triangles made of 36 vertices (the cube we created) starting from vertex 0.
-	glDrawArrays(GL_TRIANGLES, 0, 36);
 }
 
 
