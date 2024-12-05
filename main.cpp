@@ -13,39 +13,18 @@ const uint32_t HEIGHT = 600;
 #define GLEW_VAO_NUMS 1
 GLuint glew_rendering_program;
 GLuint glew_vao[GLEW_VAO_NUMS]; // vertex array object
+/* ----------------------------------------------------------------- */
 
 
-GLuint glew_create_shader_program() {
-	
-	const char* vert_shader_src =
-		"#version 450 \n"
-		"void main() \n"
-		"{ gl_Position = vec4(0.0, 0.0, 0.0, 1.0); }";
+/* ----------------------------------------------------------------- */
+void init(GLFWwindow* window);
+void display(GLFWwindow* window, double current_time);
 
-	const char* frag_shader_src =
-		"version 450 \n"
-		"out vec4 color; \n"
-		"void main() \n"
-		"{ color = vec4(0.0, 0.0, 1.0, 1.0); }";
-
-	// Returns an index for referencing it later
-	GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
-	GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
-
-	glShaderSource(vert_shader, 1, &vert_shader_src, nullptr);
-	glShaderSource(frag_shader, 1, &frag_shader_src, nullptr);
-
-	glCompileShader(vert_shader);
-	glCompileShader(frag_shader);
-
-	// Saves the indices in shader_program
-	GLuint shader_program = glCreateProgram();
-	glAttachShader(shader_program, vert_shader);
-	glAttachShader(shader_program, frag_shader);
-	glLinkProgram(shader_program); // ensures that are GLSL compatible
-
-	return shader_program;
-}
+GLuint glew_create_shader_program();
+void print_shader_log(GLuint shader);
+void print_program_log(int program);
+bool check_opengl_error();
+/* ----------------------------------------------------------------- */
 
 
 void init(GLFWwindow* window) {
@@ -60,8 +39,8 @@ void init(GLFWwindow* window) {
 
 void display(GLFWwindow* window, double current_time) {
 	
-	glClearColor(1.0, 0.0, 0.0, 1.0); // set the color to be applied when clearing background
-	glClear(GL_COLOR_BUFFER_BIT); // fill the color buffer with the color we specified above
+	// glClearColor(1.0, 0.0, 0.0, 1.0); // set the color to be applied when clearing background
+	// glClear(GL_COLOR_BUFFER_BIT); // fill the color buffer with the color we specified above
 
 	glUseProgram(glew_rendering_program);
 	
@@ -69,6 +48,115 @@ void display(GLFWwindow* window, double current_time) {
 
 	// draw one point/vertex (starting from 0)
 	glDrawArrays(GL_POINTS, 0, 1);
+}
+
+GLuint glew_create_shader_program() {
+
+	GLint vert_compiled;
+	GLint frag_compiled;
+	GLint shaders_linked;
+
+	const char* vert_shader_src =
+		"#version 450 \n"
+		"void main() \n"
+		"{ gl_Position = vec4(0.0, 0.0, 0.0, 1.0); }";
+
+	const char* frag_shader_src =
+		"version 450 \n"
+		"out vec4 color; \n"
+		"void main() \n"
+		"{ if(gl_FragCoord.x < 200) color = vec4(1.0, 0.0, 0.0, 1.0); else color = vec4(0.0, 0.0, 1.0, 1.0); }";
+
+	// Returns an index for referencing it later
+	GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
+	GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(vert_shader, 1, &vert_shader_src, nullptr);
+	glShaderSource(frag_shader, 1, &frag_shader_src, nullptr);
+
+	// Compiler shaders and check errors
+	glCompileShader(vert_shader);
+	check_opengl_error();
+	glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &vert_compiled);
+	if (vert_compiled != 1) {
+		std::cout << "Vertex compilation failed! \n";
+		print_shader_log(vert_shader);
+	}
+
+	glCompileShader(frag_shader);
+	check_opengl_error();
+	glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &frag_compiled);
+	if (vert_compiled != 1) {
+		std::cout << "Fragment compilation failed! \n";
+		print_shader_log(frag_shader);
+	}
+
+	// Saves the indices in shader_program
+	GLuint shader_program = glCreateProgram();
+	glAttachShader(shader_program, vert_shader);
+	glAttachShader(shader_program, frag_shader);
+	glLinkProgram(shader_program); // ensures that are GLSL compatible
+
+	// Check linking shaders errors
+	check_opengl_error();
+	glGetProgramiv(shader_program, GL_LINK_STATUS, &shaders_linked);
+	if (shaders_linked != 1) {
+		std::cout << "Linking shaders failed! \n";
+		print_program_log(shader_program);
+	}
+
+	return shader_program;
+}
+
+void print_shader_log(GLuint shader) {
+
+	int length = 0;
+	int chars_written = 0;
+	char* log;
+	
+	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
+	
+	if (length > 0) {
+		log = (char*) malloc(length);
+		glGetShaderInfoLog(shader, length, &chars_written, log);
+		std::cout << "Shader info log: " << log << " \n";
+		free(log);
+	}
+	else {
+		std::cout << "Shader info log empty! \n";
+	}
+}
+
+void print_program_log(int program) {
+
+	int length = 0;
+	int chars_written = 0;
+	char* log;
+
+	glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
+
+	if (length > 0) {
+		log = (char*)malloc(length);
+		glGetProgramInfoLog(program, length, &chars_written, log);
+		std::cout << "Program info log: " << log << " \n";
+		free(log);
+	}
+	else {
+		std::cout << "Program info log empty! \n";
+	}
+}
+
+bool check_opengl_error() {
+
+	bool is_error = false;
+	int opengl_error = glGetError();
+	
+	while (opengl_error != GL_NO_ERROR) {
+		std::cout << "OpenGL error: " << opengl_error << " \n";
+		is_error = true;
+		opengl_error = glGetError();
+	}
+	
+	return is_error;
 }
 /* ----------------------------------------------------------------- */
 
