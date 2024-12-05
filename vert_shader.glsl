@@ -6,7 +6,8 @@ layout (location=0) in vec3 position;
 uniform mat4 model_matrix;
 uniform mat4 view_matrix;
 uniform mat4 projection_matrix;
-uniform float time_factor; // for animation and placement of cubes
+
+uniform float time_factor; // for animation and placement of ojbects
 
 out vec4 varying_colors; // color gradient based on the pixels location
 
@@ -23,7 +24,7 @@ mat4 translate(float x, float y, float z);
 */
 void main() { 
 
-	// different for each cube instance
+	// different for each object instance
 	float i = gl_InstanceID + time_factor;
 	
 	// these are the x, y, and z components for the translation, done below
@@ -33,7 +34,7 @@ void main() {
 
 	// build rotation and translation matrices to be applied
 	// to this current cube's model matrix
-	// changing the values 3 * i changes the speed of rotation of the cubes
+	// changing the values 3 * i changes the speed of rotation of the objects
 	mat4 local_rotation_x = rotate_x(3 * i);
 	mat4 local_rotation_y = rotate_y(3 * i);
 	mat4 local_rotation_z = rotate_z(3 * i);

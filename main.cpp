@@ -15,8 +15,8 @@
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
-#define GLEW_VAO_NUMS 1 // Vertex Array Object size
-#define GLEW_VBO_NUMS 2 // Vertex Buffer Object size = one for every single object to render
+#define GLEW_VAO_NUMS 1 // Vertex Array Object size, at least one
+#define GLEW_VBO_NUMS 2 // Vertex Buffer Object size, one for every single object to render
 
 GLuint glew_rendering_program;
 GLuint glew_vao[GLEW_VAO_NUMS]; // Vertex Array Object
@@ -24,11 +24,12 @@ GLuint glew_vbo[GLEW_VBO_NUMS]; // Vertex Buffer Object
 
 float camera_x, camera_y, camera_z;
 float cube_pos_x, cube_pos_y, cube_pos_z;
+float pyramid_pos_x, pyramid_pos_y, pyramid_pos_z;
 
 // Allocates variables used in display(), so that they won't need
 // to be allocated during rendering.
-GLuint view_loc, model_loc, projection_loc;
-glm::mat4 view_mat, model_mat, perspective_mat;
+GLuint view_loc, model_loc, projection_loc, modelview_loc;
+glm::mat4 view_mat, model_mat, perspective_mat, modelview_mat;
 int width, height;
 float aspect_ratio;
 
@@ -54,7 +55,7 @@ void setup_vertices() {
 	// specify them separately.
 	// In the cube, (0, 0, 0) is the center, and the corners range from
 	// -1.0 to 1.0
-	float vertices_pos[108] = {
+	float cube_vertices_pos[108] = {
 		-1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f,
 		1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f,
 		1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, -1.0f,
@@ -68,15 +69,32 @@ void setup_vertices() {
 		-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f,
 		1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f
 	};
+
+	// We have one square base and 4 faces.
+	// So 1 square = 2 triangles. Plus the 4 triangles of the faces.
+	// A total of 6 triangles, so 3 x 6 = 18 vertices.
+	float pyramide_vertices_pos[54] = {
+		-1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, // front face
+		1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, // right face
+		1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, // back face
+		-1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, // left face
+		-1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, // base – left front
+		1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f // base – right back
+	};
+
 	
 	// Setup VAO and VBO.
-	glGenVertexArrays(GLEW_VAO_NUMS, glew_vao);
+	glGenVertexArrays(GLEW_VAO_NUMS, glew_vao); // at least 1 VAO
 	glBindVertexArray(glew_vao[0]);
-	glGenBuffers(GLEW_VBO_NUMS, glew_vbo);
+	glGenBuffers(GLEW_VBO_NUMS, glew_vbo); // at least 2 VBOs
 
 	// Load the cube vertices into the 0th VBO buffer.
 	glBindBuffer(GL_ARRAY_BUFFER, glew_vbo[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices_pos), vertices_pos, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices_pos), cube_vertices_pos, GL_STATIC_DRAW);
+
+	// Load the pyramid vertices into the 1th VBO buffer.
+	glBindBuffer(GL_ARRAY_BUFFER, glew_vbo[1]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(pyramide_vertices_pos), pyramide_vertices_pos, GL_STATIC_DRAW);
 }
 /* ----------------------------------------------------------------- */
 
@@ -89,14 +107,19 @@ void init(GLFWwindow* window) {
 	// Setup camera position.
 	camera_x = 0.0f;
 	camera_y = 0.0f;
-	camera_z = 40.0f;
+	camera_z = 12.0f;
 
 	// Setup cube position.
 	cube_pos_x = 0.0f;
 	cube_pos_y = -2.5f; // shift down Y to reveal perspective
 	cube_pos_z = 0.0f;
 
-	// Create cube vertices and load them.
+	// Setup pyramid position.
+	pyramid_pos_x = 3.0f;
+	pyramid_pos_y = -2.5f; // shift down Y to reveal perspective
+	pyramid_pos_z = 2.0f;
+
+	// Create objects vertices and load them.
 	setup_vertices();
 }
 
@@ -126,6 +149,7 @@ void display(GLFWwindow* window, double delta_time) {
 	view_loc = glGetUniformLocation(glew_rendering_program, "view_matrix");
 	model_loc = glGetUniformLocation(glew_rendering_program, "model_matrix");
 	projection_loc = glGetUniformLocation(glew_rendering_program, "projection_matrix");
+	modelview_loc = glGetUniformLocation(glew_rendering_program, "modelview_matrix");
 
 	// Build perspective matrix.
 	// Note that the perspective matrix could technically be rebuilt
@@ -136,24 +160,25 @@ void display(GLFWwindow* window, double delta_time) {
 	perspective_mat = glm::perspective(1.0472f, aspect_ratio, 0.1f, 1000.0f); // 1.0472 radians = 60 degrees
 
 	// Build view matrix, model matrix, model-view matrix.
+
+	// View matrix is always the same regardless of the object.
 	view_mat = glm::translate(
 					glm::mat4(1.0f) /* identity matrix*/,
 					glm::vec3(-camera_x, -camera_y, -camera_z));
 
+	// Model matrix and consequently modelview matrix change
+	// as the object to draw changes.
 	model_mat = glm::translate(
 		glm::mat4(1.0f),
 		glm::vec3(cube_pos_x, cube_pos_y, cube_pos_z));
 
-	// The model matrix and model-view matrix are now
-	// being built in the vertex shader.
-	// Copy perspective and model-view matrices to corresponding uniform variables
-	// in the GLSL shaders files.
+	modelview_mat = model_mat * view_mat;
+
+	// Draw cube
 	glUniformMatrix4fv(view_loc, 1, GL_FALSE, glm::value_ptr(view_mat));
 	glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(model_mat));
+	glUniformMatrix4fv(modelview_loc, 1, GL_FALSE, glm::value_ptr(modelview_mat));
 	glUniformMatrix4fv(projection_loc, 1, GL_FALSE, glm::value_ptr(perspective_mat));
-	float time_factor = ((float)delta_time) / 2; // changing this value changes the speed of the cubes
-	GLuint time_factor_loc = glGetUniformLocation(glew_rendering_program, "time_factor");
-	glUniform1f(time_factor_loc, (float)time_factor);
 
 	// Associate VBO with the corresponding vertex attribute in the vertex shader.
 	// Enables the buffer containing the cube vertices and attaches it to the
@@ -168,7 +193,31 @@ void display(GLFWwindow* window, double delta_time) {
 	glDepthFunc(GL_LEQUAL);
 
 	// Draw triangles made of 36 vertices (the cube we created) starting from vertex 0.
-	glDrawArraysInstanced(GL_TRIANGLES, 0, 36, 24);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+	// Draw pyramid
+	model_mat = glm::translate(
+		glm::mat4(1.0f),
+		glm::vec3(pyramid_pos_x, pyramid_pos_y, pyramid_pos_z));
+
+	modelview_mat = model_mat * view_mat;
+
+	glUniformMatrix4fv(view_loc, 1, GL_FALSE, glm::value_ptr(view_mat));
+	glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(model_mat));
+	glUniformMatrix4fv(modelview_loc, 1, GL_FALSE, glm::value_ptr(modelview_mat));
+	glUniformMatrix4fv(projection_loc, 1, GL_FALSE, glm::value_ptr(perspective_mat));
+
+	glBindBuffer(GL_ARRAY_BUFFER, glew_vbo[1]);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(0);
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+
+	// Draw triangles made of 18 vertices (the pyramid we created) starting from vertex 0.
+	glDrawArrays(GL_TRIANGLES, 0, 18);
+
 }
 
 

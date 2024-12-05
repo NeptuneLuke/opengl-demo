@@ -10,7 +10,7 @@ uniform mat4 model_matrix;
 uniform mat4 view_matrix;
 
 void main() { 
-	//color = vec4(1.0, 0.0, 0.0, 1.0); // hardcoded red color for every cube's pixel
+	//color = vec4(1.0, 0.0, 0.0, 1.0); // hardcoded red color for every object's pixel
 	color = varying_colors;
 }
 
