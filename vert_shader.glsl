@@ -27,9 +27,9 @@ void main() {
 	float i = gl_InstanceID + time_factor;
 	
 	// these are the x, y, and z components for the translation, done below
-	float a = sin(203.0 * i/8000.0) * 403.0;
-	float b = cos(301.0 * i/4001.0) * 401.0;
-	float c = sin(400.0 * i/6003.0) * 405.0;
+	float a = sin(2.0 * i) * 10.0;
+	float b = sin(3.0 * i) * 10.0;
+	float c = sin(4.0 * i) * 10.0;
 
 	// build rotation and translation matrices to be applied
 	// to this current cube's model matrix

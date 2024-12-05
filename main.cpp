@@ -89,7 +89,7 @@ void init(GLFWwindow* window) {
 	// Setup camera position.
 	camera_x = 0.0f;
 	camera_y = 0.0f;
-	camera_z = 400.0f;
+	camera_z = 40.0f;
 
 	// Setup cube position.
 	cube_pos_x = 0.0f;
@@ -168,7 +168,7 @@ void display(GLFWwindow* window, double delta_time) {
 	glDepthFunc(GL_LEQUAL);
 
 	// Draw triangles made of 36 vertices (the cube we created) starting from vertex 0.
-	glDrawArraysInstanced(GL_TRIANGLES, 0, 36, 100000);
+	glDrawArraysInstanced(GL_TRIANGLES, 0, 36, 24);
 }
 
 
