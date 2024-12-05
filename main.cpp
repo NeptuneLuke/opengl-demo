@@ -111,6 +111,9 @@ void display(GLFWwindow* window, double delta_time) {
 	glClearColor(1.0, 1.0, 1.0, 1.0); // set the color to be applied when clearing background
 	glClear(GL_COLOR_BUFFER_BIT); // fill the color buffer with the color we specified above
 
+	// Try removing the glClear(GL_COLOR_BUFFER_BIT) call
+	// above and see the results!
+
 	// Enable shaders, installing the GLSL code
 	// on the GPU. It doesn't run the shader program,
 	// it just enables subsequent OpenGL calls to determine
@@ -135,10 +138,48 @@ void display(GLFWwindow* window, double delta_time) {
 					glm::mat4(1.0f) /* identity matrix*/,
 					glm::vec3(-camera_x, -camera_y, -camera_z));
 
-	model_mat = glm::translate(
-					glm::mat4(1.0f) /* identity matrix*/,
-					glm::vec3(cube_pos_x, cube_pos_y, cube_pos_z));
+	// We can add animation to the cube by building the model matrix
+	// using a varying translation and rotation based on the time.
+	// Translation on the left.
+	glm::mat4 translation_mat = 
+		glm::translate(
+			glm::mat4(1.0f),
+			glm::vec3(sin(0.35f * delta_time) * 2.0f,
+				      cos(0.52f * delta_time) * 2.0f,
+				      sin(0.7f * delta_time) * 2.0f));
+
+	// Rotation on the right.
+	// The 1.75 constant adjusts the rotation speed.
+	// Y axis rotation.
+	glm::mat4 rotation_mat = 
+		glm::rotate(
+			glm::mat4(1.0f),
+			1.75f * (float)delta_time,
+			glm::vec3(0.0f, 1.0f, 0.0f));
 	
+	// X axis rotation.
+	rotation_mat =
+		glm::rotate(rotation_mat,
+					1.75f * (float)delta_time,
+					glm::vec3(1.0f, 0.0f, 0.0f));
+	
+	// Z axis rotation.
+	rotation_mat =
+		glm::rotate(rotation_mat,
+			1.75f * (float)delta_time,
+			glm::vec3(0.0f, 0.0f, 1.0f));
+
+	// The order of multiplication is significant!
+	// Try inverting the order and see the results!
+	// The computation of a vertex is right to left,
+	// meaning that the rotation is done first, and then the translation.
+	model_mat = translation_mat * rotation_mat;
+	/* model_mat = glm::translate(
+					glm::mat4(1.0f),
+					glm::vec3(cube_pos_x, cube_pos_y, cube_pos_z));
+	*/
+
+
 	modelview_mat = view_mat * model_mat;
 
 	// Copy perspective and model-view matrices to corresponding uniform variables
