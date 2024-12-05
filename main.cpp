@@ -15,6 +15,9 @@ const uint32_t HEIGHT = 600;
 #define GLEW_VAO_NUMS 1
 GLuint glew_rendering_program;
 GLuint glew_vao[GLEW_VAO_NUMS]; // vertex array object
+
+float triangle_pos_x = 0.0f;
+float triangle_move_offset = 0.01f;
 /* ----------------------------------------------------------------- */
 
 
@@ -43,12 +46,31 @@ void init(GLFWwindow* window) {
 
 void display(GLFWwindow* window, double current_time) {
 	
-	// glClearColor(1.0, 0.0, 0.0, 1.0); // set the color to be applied when clearing background
-	// glClear(GL_COLOR_BUFFER_BIT); // fill the color buffer with the color we specified above
+	// Clear the depth buffer each frame 
+	// (it isn't necessary now, but will become fundamental
+	// in future animated scenes, to ensure that depth comparisons
+	// aren't affected by old depth data)
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glClearColor(1.0, 1.0, 1.0, 1.0); // set the color to be applied when clearing background
+	glClear(GL_COLOR_BUFFER_BIT); // fill the color buffer with the color we specified above
 
 	glUseProgram(glew_rendering_program);
 	
-	glPointSize(30.0f);
+	// Move the triangle from left to right
+	// and back
+	triangle_pos_x += triangle_move_offset; // move the triangle along the x axis
+	if (triangle_pos_x > 1.0f) {
+		triangle_move_offset = -0.01f;
+	}
+	if (triangle_pos_x < -1.0f) {
+		triangle_move_offset = 0.01f;
+	}
+
+	// "triangle_offset" is defined in vert_shader.glsl
+	GLuint offset_ptr = glGetUniformLocation(glew_rendering_program, "triangle_offset"); // get ptr to "triangle_offset""
+	glProgramUniform1f(glew_rendering_program, offset_ptr, triangle_pos_x); // send value in triangle_pos_x to "triangle_offset"
+
+	// glPointSize(30.0f);
 
 	// draw three vertices (a triangle) starting from vertex 0
 	glDrawArrays(GL_TRIANGLES, 0, 3);
