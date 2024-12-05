@@ -85,8 +85,8 @@ GLuint glew_create_shader_program() {
 	std::string vert_shader_str = read_shader_source("vert_shader.glsl");
 	std::string frag_shader_str = read_shader_source("frag_shader.glsl");
 
+	// Converts to C's null terminated strings
 	const char* vert_shader_src = vert_shader_str.c_str();
-
 	const char* frag_shader_src = frag_shader_str.c_str();
 
 	// Returns an index for referencing it later
@@ -107,7 +107,7 @@ GLuint glew_create_shader_program() {
 	glCompileShader(frag_shader);
 	check_opengl_error();
 	glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &frag_compiled);
-	if (vert_compiled != 1) {
+	if (frag_compiled != 1) {
 		std::cout << "Fragment compilation failed! \n";
 		print_shader_log(frag_shader);
 	}
