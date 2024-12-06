@@ -32,7 +32,6 @@ GLuint view_loc, model_loc, projection_loc, modelview_loc;
 glm::mat4 view_mat, model_mat, perspective_mat, modelview_mat;
 int width, height;
 float aspect_ratio;
-
 /* ----------------------------------------------------------------- */
 
 
@@ -82,7 +81,6 @@ void setup_vertices() {
 		1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f // base – right back
 	};
 
-	
 	// Setup VAO and VBO.
 	glGenVertexArrays(GLEW_VAO_NUMS, glew_vao); // at least 1 VAO
 	glBindVertexArray(glew_vao[0]);
@@ -124,7 +122,7 @@ void init(GLFWwindow* window) {
 }
 
 void display(GLFWwindow* window, double delta_time) {
-	
+
 	// Clear the depth buffer each frame 
 	// (it isn't necessary now, but will become fundamental
 	// in future animated scenes, to ensure that depth comparisons
@@ -177,6 +175,9 @@ void display(GLFWwindow* window, double delta_time) {
 
 	modelview_mat = model_mat * view_mat;
 
+	// Enable back-face culling
+	glEnable(GL_CULL_FACE);
+
 	// Draw cube
 	glUniformMatrix4fv(view_loc, 1, GL_FALSE, glm::value_ptr(view_mat));
 	glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(model_mat));
@@ -194,6 +195,10 @@ void display(GLFWwindow* window, double delta_time) {
 	// depth testing to use.
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
+
+	// Set winding order for back-face culling.
+	// The cube vertices have clockwise winding order.
+	glFrontFace(GL_CW);
 
 	// Draw triangles made of 36 vertices (the cube we created) starting from vertex 0.
 	glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -217,6 +222,9 @@ void display(GLFWwindow* window, double delta_time) {
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
+	// Set winding order for back-face culling.
+	// The pyramid vertices have counter-clockwise winding order.
+	glFrontFace(GL_CCW);
 
 	// Draw triangles made of 18 vertices (the pyramid we created) starting from vertex 0.
 	glDrawArrays(GL_TRIANGLES, 0, 18);
