@@ -102,7 +102,7 @@ void setup_vertices() {
 void init(GLFWwindow* window) {
 
 	// Read shader code and build the rendering program.
-	glew_rendering_program = myutils::glew_create_shader_program();
+	glew_rendering_program = myutils::glew_create_shader_program("vert_shader.glsl", "frag_shader.glsl");
 	
 	// Setup camera position.
 	camera_x = 0.0f;
@@ -157,6 +157,9 @@ void display(GLFWwindow* window, double delta_time) {
 	// However for semplicitly, for now we will leave it like that.
 	glfwGetFramebufferSize(window, &width, &height);
 	aspect_ratio = (float)width / (float)height;
+	
+	// 0.1f is the near clipping plane
+	// 1000.0f is the far clipping plane
 	perspective_mat = glm::perspective(1.0472f, aspect_ratio, 0.1f, 1000.0f); // 1.0472 radians = 60 degrees
 
 	// Build view matrix, model matrix, model-view matrix.

@@ -3,124 +3,213 @@
 namespace myutils {
 
 
-	GLuint glew_create_shader_program() {
+// Vertex and Fragment shaders program
+GLuint glew_create_shader_program(const char* vert, const char* frag) {
 
-		GLint vert_compiled;
-		GLint frag_compiled;
-		GLint shaders_linked;
+	// Builds shaders
+	GLuint vert_shader = prepare_shader(GL_VERTEX_SHADER, vert);
+	GLuint frag_shader = prepare_shader(GL_FRAGMENT_SHADER, frag);
 
-		std::string vert_shader_str = read_shader_source("vert_shader.glsl");
-		std::string frag_shader_str = read_shader_source("frag_shader.glsl");
+	// Saves the indices in shader_program
+	GLuint shader_program = glCreateProgram();
+	glAttachShader(shader_program, vert_shader);
+	glAttachShader(shader_program, frag_shader);
+	
+	// Links program
+	finalize_shader_program(shader_program);
 
-		// Converts to C's null terminated strings
-		const char* vert_shader_src = vert_shader_str.c_str();
-		const char* frag_shader_src = frag_shader_str.c_str();
+	return shader_program;
+}
 
-		// Returns an index for referencing it later
-		GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
-		GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
-		glShaderSource(vert_shader, 1, &vert_shader_src, nullptr);
-		glShaderSource(frag_shader, 1, &frag_shader_src, nullptr);
+// Vertex, Geometry, Fragment shaders program
+GLuint glew_create_shader_program(const char* vert, const char* geometry, const char* frag) {
 
-		// Compiler shaders and check errors
-		glCompileShader(vert_shader);
-		check_opengl_error();
-		glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &vert_compiled);
-		if (vert_compiled != 1) {
-			std::cout << "Vertex compilation failed! \n";
-			print_shader_log(vert_shader);
-		}
+	// Builds shaders
+	GLuint vert_shader = prepare_shader(GL_VERTEX_SHADER, vert);
+	GLuint geometry_shader = prepare_shader(GL_GEOMETRY_SHADER, geometry);
+	GLuint frag_shader = prepare_shader(GL_FRAGMENT_SHADER, frag);
+	
+	// Saves the indices in shader_program
+	GLuint shader_program = glCreateProgram();
+	glAttachShader(shader_program, vert_shader);
+	glAttachShader(shader_program, geometry_shader);
+	glAttachShader(shader_program, frag_shader);
+	
+	// Links program
+	finalize_shader_program(shader_program);
 
-		glCompileShader(frag_shader);
-		check_opengl_error();
-		glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &frag_compiled);
-		if (frag_compiled != 1) {
-			std::cout << "Fragment compilation failed! \n";
-			print_shader_log(frag_shader);
-		}
+	return shader_program;
+}
 
-		// Saves the indices in shader_program
-		GLuint shader_program = glCreateProgram();
-		glAttachShader(shader_program, vert_shader);
-		glAttachShader(shader_program, frag_shader);
-		glLinkProgram(shader_program); // ensures that are GLSL compatible
+// Vertex, Tessellation control, Tessellation evalutaion, Fragment shaders program
+GLuint glew_create_shader_program(
+	const char* vert,
+	const char* tess_control, const char* tess_eval,
+	const char* frag) {
 
-		// Check linking shaders errors
-		check_opengl_error();
-		glGetProgramiv(shader_program, GL_LINK_STATUS, &shaders_linked);
-		if (shaders_linked != 1) {
-			std::cout << "Linking shaders failed! \n";
-			print_program_log(shader_program);
-		}
+	// Builds shaders
+	GLuint vert_shader = prepare_shader(GL_VERTEX_SHADER, vert);
+	GLuint tess_control_shader = prepare_shader(GL_TESS_CONTROL_SHADER, tess_control);
+	GLuint tess_eval_shader = prepare_shader(GL_TESS_EVALUATION_SHADER, tess_eval);
+	GLuint frag_shader = prepare_shader(GL_FRAGMENT_SHADER, frag);
 
-		return shader_program;
+
+	// Saves the indices in shader_program
+	GLuint shader_program = glCreateProgram();
+	glAttachShader(shader_program, vert_shader);
+	glAttachShader(shader_program, tess_control_shader);
+	glAttachShader(shader_program, tess_eval_shader);
+	glAttachShader(shader_program, frag_shader);
+
+	// Links program
+	finalize_shader_program(shader_program);
+
+	return shader_program;
+}
+
+// Vertex, Tessellation control, Tessellation evalutaion, Geometry, Fragment shaders program
+GLuint glew_create_shader_program(
+	const char* vert,
+	const char* tess_control, const char* tess_eval,
+	const char* geometry,
+	const char* frag) {
+
+	// Builds shaders
+	GLuint vert_shader = prepare_shader(GL_VERTEX_SHADER, vert);
+	GLuint tess_control_shader = prepare_shader(GL_TESS_CONTROL_SHADER, tess_control);
+	GLuint tess_eval_shader = prepare_shader(GL_TESS_EVALUATION_SHADER, tess_eval);
+	GLuint geometry_shader = prepare_shader(GL_GEOMETRY_SHADER, geometry);
+	GLuint frag_shader = prepare_shader(GL_FRAGMENT_SHADER, frag);
+
+
+	// Saves the indices in shader_program
+	GLuint shader_program = glCreateProgram();
+	glAttachShader(shader_program, vert_shader);
+	glAttachShader(shader_program, tess_control_shader);
+	glAttachShader(shader_program, tess_eval_shader);
+	glAttachShader(shader_program, geometry_shader);
+	glAttachShader(shader_program, frag_shader);
+
+	// Links program
+	finalize_shader_program(shader_program);
+
+	return shader_program;
+}
+
+GLuint prepare_shader(int SHADER_TYPE, const char* shader_file) {
+	
+	GLint shader_compiled;
+	std::string shader_str = read_shader_source(shader_file);
+	const char* shader_src = shader_str.c_str(); // converts to C's null-terminated strings
+
+	// Returns and index for referencing
+	GLuint shader_ref = glCreateShader(SHADER_TYPE);
+
+	// Compile shader
+	glShaderSource(shader_ref, 1, &shader_src, nullptr);
+	glCompileShader(shader_ref);
+
+	// Check erros
+	check_opengl_error();
+	glGetShaderiv(shader_ref, GL_COMPILE_STATUS, &shader_compiled);
+	if (shader_compiled != 1){
+		
+		if (SHADER_TYPE == 35633) std::cout << "Vertex ";
+		if (SHADER_TYPE == 36488) std::cout << "Tess Control ";
+		if (SHADER_TYPE == 36487) std::cout << "Tess Eval ";
+		if (SHADER_TYPE == 36313) std::cout << "Geometry ";
+		if (SHADER_TYPE == 35632) std::cout << "Fragment ";
+		std::cout << "shader compilation error! \n";
+		
+		print_shader_log(shader_ref);
 	}
 
-	std::string read_shader_source(const char* file_path) {
+	return shader_ref;
+}
 
-		std::string line = "";
-		std::string file_content;
-		std::ifstream file_stream(file_path, std::ios::in);
+int finalize_shader_program(GLuint shader_program) {
 
-		while (!file_stream.eof()) {
-			std::getline(file_stream, line);
-			file_content.append(line + "\n");
-		}
+	GLint shaders_linked;
 
-		file_stream.close();
+	glLinkProgram(shader_program); // ensures that are GLSL compatible
 
-		return file_content;
+	// Check linking shaders errors
+	check_opengl_error();
+	glGetProgramiv(shader_program, GL_LINK_STATUS, &shaders_linked);
+	if (shaders_linked != 1) {
+		std::cout << "Linking shaders failed! \n";
+		print_program_log(shader_program);
 	}
 
-	void print_shader_log(GLuint shader) {
+	return shader_program;
+}
 
-		int length = 0;
-		int chars_written = 0;
-		char* log;
+std::string read_shader_source(const char* file_path) {
 
-		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
+	std::string line = "";
+	std::string file_content;
+	std::ifstream file_stream(file_path, std::ios::in);
 
-		if (length > 0) {
-			log = (char*)malloc(length);
-			glGetShaderInfoLog(shader, length, &chars_written, log);
-			std::cout << "Shader info log: " << log << " \n";
-			free(log);
-		}
-		else {
-			std::cout << "Shader info log empty! \n";
-		}
+	while (!file_stream.eof()) {
+		std::getline(file_stream, line);
+		file_content.append(line + "\n");
 	}
 
-	void print_program_log(int program) {
+	file_stream.close();
 
-		int length = 0;
-		int chars_written = 0;
-		char* log;
+	return file_content;
+}
 
-		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
+void print_shader_log(GLuint shader) {
 
-		if (length > 0) {
-			log = (char*)malloc(length);
-			glGetProgramInfoLog(program, length, &chars_written, log);
-			std::cout << "Program info log: " << log << " \n";
-			free(log);
-		}
-		else {
-			std::cout << "Program info log empty! \n";
-		}
+	int length = 0;
+	int chars_written = 0;
+	char* log;
+
+	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
+
+	if (length > 0) {
+		log = (char*)malloc(length);
+		glGetShaderInfoLog(shader, length, &chars_written, log);
+		std::cout << "Shader info log: " << log << " \n";
+		free(log);
+	}
+	else {
+		std::cout << "Shader info log empty! \n";
+	}
+}
+
+void print_program_log(int program) {
+
+	int length = 0;
+	int chars_written = 0;
+	char* log;
+
+	glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
+
+	if (length > 0) {
+		log = (char*)malloc(length);
+		glGetProgramInfoLog(program, length, &chars_written, log);
+		std::cout << "Program info log: " << log << " \n";
+		free(log);
+	}
+	else {
+		std::cout << "Program info log empty! \n";
+	}
+}
+
+bool check_opengl_error() {
+
+	bool is_error = false;
+	int opengl_error = glGetError();
+
+	while (opengl_error != GL_NO_ERROR) {
+		std::cout << "OpenGL error: " << opengl_error << " \n";
+		is_error = true;
+		opengl_error = glGetError();
 	}
 
-	bool check_opengl_error() {
+	return is_error;
+}
 
-		bool is_error = false;
-		int opengl_error = glGetError();
-
-		while (opengl_error != GL_NO_ERROR) {
-			std::cout << "OpenGL error: " << opengl_error << " \n";
-			is_error = true;
-			opengl_error = glGetError();
-		}
-
-		return is_error;
-	}
 }
