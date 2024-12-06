@@ -39,11 +39,15 @@ float aspect_ratio;
 void init(GLFWwindow* window);
 void display(GLFWwindow* window, double delta_time);
 
+// Sets up the vertices of the objects.
 void setup_vertices();
+
+// Rebuilds the perspective matrix according to the new window sizes.
+void window_reshape_perspective_matrix_CALLBACK(GLFWwindow* window, int new_width, int new_height);
 /* ----------------------------------------------------------------- */
 
 
-// Sets up the vertices of the 2x2x2 cube.
+// Sets up the vertices of the objects.
 void setup_vertices() {
 	
 	// We have 6 cube faces, so 12 triangles.
