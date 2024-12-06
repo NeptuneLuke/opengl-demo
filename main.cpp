@@ -28,7 +28,7 @@ float pyramid_pos_x, pyramid_pos_y, pyramid_pos_z;
 
 // Allocates variables used in display(), so that they won't need
 // to be allocated during rendering.
-GLuint view_loc, model_loc, projection_loc, modelview_loc;
+GLuint projection_loc, modelview_loc;
 glm::mat4 view_mat, model_mat, perspective_mat, modelview_mat;
 int width, height;
 float aspect_ratio;
@@ -49,7 +49,7 @@ void window_reshape_perspective_matrix_CALLBACK(GLFWwindow* window, int new_widt
 
 // Sets up the vertices of the objects.
 void setup_vertices() {
-	
+
 	// We have 6 cube faces, so 12 triangles.
 	// Each triangle is 3 vertices, so 3 x 12 = 36 vertices.
 	// Each vertex has 3 values (X, Y, Z), so 3 x 36 = 108 vertices positions.
@@ -105,7 +105,7 @@ void init(GLFWwindow* window) {
 
 	// Read shader code and build the rendering program.
 	glew_rendering_program = myutils::glew_create_shader_program("vert_shader.glsl", "frag_shader.glsl");
-	
+
 	// Setup camera position.
 	camera_x = 0.0f;
 	camera_y = 0.0f;
@@ -136,7 +136,7 @@ void init(GLFWwindow* window) {
 
 void display(GLFWwindow* window, double delta_time) {
 
-	// Clear the depth buffer each frame 
+	// Clear the depth buffer each frame
 	// (it isn't necessary now, but will become fundamental
 	// in future animated scenes, to ensure that depth comparisons
 	// aren't affected by old depth data).
@@ -154,16 +154,15 @@ void display(GLFWwindow* window, double delta_time) {
 	// it just enables subsequent OpenGL calls to determine
 	// the shader's vertex attribute and uniform locations.
 	glUseProgram(glew_rendering_program);
-	
+
+	// Enable back-face culling
+	glEnable(GL_CULL_FACE);
+
 	// Get the uniform variables for the model-view and projection matrices
 	// from the GLSL shaders files.
-	view_loc = glGetUniformLocation(glew_rendering_program, "view_matrix");
-	model_loc = glGetUniformLocation(glew_rendering_program, "model_matrix");
 	projection_loc = glGetUniformLocation(glew_rendering_program, "projection_matrix");
 	modelview_loc = glGetUniformLocation(glew_rendering_program, "modelview_matrix");
 
-	// Build view matrix, model matrix, model-view matrix.
-	
 	// We are no longer building the perspective matrix
 	// for every frame, because we don't need it, except for
 	// when resizing the window.
@@ -173,9 +172,12 @@ void display(GLFWwindow* window, double delta_time) {
 	// but we still need it to build it for every frame 
 	// (in the future it will become useful).
 	view_mat = glm::translate(
-					glm::mat4(1.0f) /* identity matrix*/,
-					glm::vec3(-camera_x, -camera_y, -camera_z));
+		glm::mat4(1.0f) /* identity matrix*/,
+		glm::vec3(-camera_x, -camera_y, -camera_z));
 
+
+	// Draw the cube.
+	
 	// Model matrix and consequently modelview matrix change
 	// as the object to draw changes.
 	model_mat = glm::translate(
@@ -184,12 +186,6 @@ void display(GLFWwindow* window, double delta_time) {
 
 	modelview_mat = model_mat * view_mat;
 
-	// Enable back-face culling
-	glEnable(GL_CULL_FACE);
-
-	// Draw cube
-	glUniformMatrix4fv(view_loc, 1, GL_FALSE, glm::value_ptr(view_mat));
-	glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(model_mat));
 	glUniformMatrix4fv(modelview_loc, 1, GL_FALSE, glm::value_ptr(modelview_mat));
 	glUniformMatrix4fv(projection_loc, 1, GL_FALSE, glm::value_ptr(perspective_mat));
 
@@ -220,8 +216,6 @@ void display(GLFWwindow* window, double delta_time) {
 
 	modelview_mat = model_mat * view_mat;
 
-	glUniformMatrix4fv(view_loc, 1, GL_FALSE, glm::value_ptr(view_mat));
-	glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(model_mat));
 	glUniformMatrix4fv(modelview_loc, 1, GL_FALSE, glm::value_ptr(modelview_mat));
 	glUniformMatrix4fv(projection_loc, 1, GL_FALSE, glm::value_ptr(perspective_mat));
 
@@ -229,20 +223,17 @@ void display(GLFWwindow* window, double delta_time) {
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
 
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);
 	// Set winding order for back-face culling.
 	// The pyramid vertices have counter-clockwise winding order.
 	glFrontFace(GL_CCW);
 
 	// Draw triangles made of 18 vertices (the pyramid we created) starting from vertex 0.
 	glDrawArrays(GL_TRIANGLES, 0, 18);
-
 }
 
 // Rebuilds the perspective matrix according to the new window sizes.
 void window_reshape_perspective_matrix_CALLBACK(GLFWwindow* window, int new_width, int new_height) {
-	
+
 	aspect_ratio = (float)new_width / (float)new_height;
 	glViewport(0, 0, new_width, new_height);
 	perspective_mat = glm::perspective(
@@ -285,7 +276,7 @@ int main() {
 
 	// Check for events until the window is closed
 	while (!glfwWindowShouldClose(window)) {
-		
+
 		// including the current time ensures that our animations
 		// run at the same speed regardless of the computer being used
 		display(window, glfwGetTime());
