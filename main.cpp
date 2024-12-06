@@ -119,6 +119,15 @@ void init(GLFWwindow* window) {
 
 	// Create objects vertices and load them.
 	setup_vertices();
+
+	// Pre-computing the perspective matrix.
+	glfwGetFramebufferSize(window, &width, &height);
+	aspect_ratio = (float)width / (float)height;
+	perspective_mat = glm::perspective(
+		1.0472f, // 1.0472 radians = 60 degrees
+		aspect_ratio,
+		0.1f, // 0.1f is the near clipping plane
+		1000.0f); // 1000.0f is the far clipping plane
 }
 
 void display(GLFWwindow* window, double delta_time) {
@@ -149,20 +158,16 @@ void display(GLFWwindow* window, double delta_time) {
 	projection_loc = glGetUniformLocation(glew_rendering_program, "projection_matrix");
 	modelview_loc = glGetUniformLocation(glew_rendering_program, "modelview_matrix");
 
-	// Build perspective matrix.
-	// Note that the perspective matrix could technically be rebuilt
-	// only when the window is resized, and not at every frame (as we are doing now).
-	// However for semplicitly, for now we will leave it like that.
-	glfwGetFramebufferSize(window, &width, &height);
-	aspect_ratio = (float)width / (float)height;
-	
-	// 0.1f is the near clipping plane
-	// 1000.0f is the far clipping plane
-	perspective_mat = glm::perspective(1.0472f, aspect_ratio, 0.1f, 1000.0f); // 1.0472 radians = 60 degrees
-
 	// Build view matrix, model matrix, model-view matrix.
+	
+	// We are no longer building the perspective matrix
+	// for every frame, because we don't need it, except for
+	// when resizing the window.
+	// The perspective matrix build was moved to init().
 
-	// View matrix is always the same regardless of the object.
+	// View matrix is always the same regardless of the object
+	// but we still need it to build it for every frame 
+	// (in the future it will become useful).
 	view_mat = glm::translate(
 					glm::mat4(1.0f) /* identity matrix*/,
 					glm::vec3(-camera_x, -camera_y, -camera_z));
@@ -231,6 +236,18 @@ void display(GLFWwindow* window, double delta_time) {
 
 }
 
+// Rebuilds the perspective matrix according to the new window sizes.
+void window_reshape_perspective_matrix_CALLBACK(GLFWwindow* window, int new_width, int new_height) {
+	
+	aspect_ratio = (float)new_width / (float)new_height;
+	glViewport(0, 0, new_width, new_height);
+	perspective_mat = glm::perspective(
+		1.0472f, // 1.0472 radians = 60 degrees
+		aspect_ratio,
+		0.1f, // 0.1f is the near clipping plane
+		1000.0f); // 1000.0f is the far clipping plane
+}
+
 
 int main() {
 
@@ -254,6 +271,11 @@ int main() {
 	}
 
 	glfwSwapInterval(1); // enables VSync (1)
+
+	// Link the callback to the function that
+	// rebuilds the perspective matrix according
+	// to the new window sizes.
+	glfwSetWindowSizeCallback(window, window_reshape_perspective_matrix_CALLBACK);
 
 	init(window);
 
