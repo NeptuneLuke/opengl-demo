@@ -1,6 +1,6 @@
 #version 450
 
-in vec4 varying_colors;
+in vec2 texture_pixels;
 out vec4 color;
 
 // Here the following uniform are not used,
@@ -8,9 +8,10 @@ out vec4 color;
 uniform mat4 projection_matrix;
 uniform mat4 modelview_matrix;
 
+layout(binding=0) uniform sampler2D texture_sampler;
+
 void main() { 
-	//color = vec4(1.0, 0.0, 0.0, 1.0); // hardcoded red color for every object's pixel
-	color = varying_colors;
+	color = texture(texture_sampler, texture_pixels);
 }
 
 /*

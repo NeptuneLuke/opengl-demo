@@ -1,14 +1,15 @@
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include "my_utils.hpp"
+
+#include <GL/glew.h> // not actually required, because of utils.hpp
+#include <GLFW/glfw3.h> // not actually required, because of utils.hpp
 #include <glm\glm\glm.hpp>
 #include <glm\glm\gtc\type_ptr.hpp>
 #include <glm\glm\gtc\matrix_transform.hpp>
 
-#include <iostream>
+#include <iostream> // not actually required, because of utils.hpp
 #include <cstdlib> // EXIT_FAILURE | EXIT_SUCCESS
 #include <cstdint> // uint32_t
 
-#include "utils.hpp"
 
 
 /* ----------------------------------------------------------------- */
@@ -32,6 +33,8 @@ GLuint projection_loc, modelview_loc;
 glm::mat4 view_mat, model_mat, perspective_mat, modelview_mat;
 int width, height;
 float aspect_ratio;
+
+GLuint pyramid_texture;
 /* ----------------------------------------------------------------- */
 
 
@@ -76,7 +79,8 @@ void setup_vertices() {
 	// We have one square base and 4 faces.
 	// So 1 square = 2 triangles. Plus the 4 triangles of the faces.
 	// A total of 6 triangles, so 3 x 6 = 18 vertices.
-	float pyramide_vertices_pos[54] = {
+	// Each vertex has 3 values (X, Y, Z), so 3 x 18 = 54 vertices positions.
+	float pyramid_vertices_pos[54] = {
 		-1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, // front face
 		1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, // right face
 		1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, // back face
@@ -85,18 +89,33 @@ void setup_vertices() {
 		1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f // base – right back
 	};
 
+	// Setup the pyramid's texture coordinates.
+	// Obviously this will require to have its VBO.
+	float pyramid_texture_coords[36] = {
+		0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,   0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f, // top and right faces
+		0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,   0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f, // back and left faces
+		0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,   1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f }; // base triangles
+
+
 	// Setup VAO and VBO.
 	glGenVertexArrays(GLEW_VAO_NUMS, glew_vao); // at least 1 VAO
 	glBindVertexArray(glew_vao[0]);
 	glGenBuffers(GLEW_VBO_NUMS, glew_vbo); // at least 2 VBOs
 
+	/*
 	// Load the cube vertices into the 0th VBO buffer.
 	glBindBuffer(GL_ARRAY_BUFFER, glew_vbo[0]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices_pos), cube_vertices_pos, GL_STATIC_DRAW);
+	*/
+	
 
-	// Load the pyramid vertices into the 1th VBO buffer.
+	// Load the pyramid vertices into the 0th VBO buffer.
+	glBindBuffer(GL_ARRAY_BUFFER, glew_vbo[0]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(pyramid_vertices_pos), pyramid_vertices_pos, GL_STATIC_DRAW);
+
+	// Load the pyramid texture coordinates into the 1th VBO buffer.
 	glBindBuffer(GL_ARRAY_BUFFER, glew_vbo[1]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(pyramide_vertices_pos), pyramide_vertices_pos, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(pyramid_texture_coords), pyramid_texture_coords, GL_STATIC_DRAW);
 }
 /* ----------------------------------------------------------------- */
 
@@ -132,6 +151,8 @@ void init(GLFWwindow* window) {
 		aspect_ratio,
 		0.1f, // 0.1f is the near clipping plane
 		1000.0f); // 1000.0f is the far clipping plane
+
+	pyramid_texture = myutils::load_texture("brick1.jpg");
 }
 
 void display(GLFWwindow* window, double delta_time) {
@@ -158,6 +179,11 @@ void display(GLFWwindow* window, double delta_time) {
 	// Enable back-face culling
 	glEnable(GL_CULL_FACE);
 
+	// Adjust OpenGL settings to enable HSR with the specific
+	// depth testing to use.
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+
 	// Get the uniform variables for the model-view and projection matrices
 	// from the GLSL shaders files.
 	projection_loc = glGetUniformLocation(glew_rendering_program, "projection_matrix");
@@ -176,13 +202,38 @@ void display(GLFWwindow* window, double delta_time) {
 		glm::vec3(-camera_x, -camera_y, -camera_z));
 
 
+	/*
 	// Draw the cube.
 	
+	// Set winding order for back-face culling.
+	// The cube vertices have clockwise winding order.
+	glFrontFace(GL_CW);
+
 	// Model matrix and consequently modelview matrix change
 	// as the object to draw changes.
 	model_mat = glm::translate(
 		glm::mat4(1.0f),
 		glm::vec3(cube_pos_x, cube_pos_y, cube_pos_z));
+
+	modelview_mat = model_mat * view_mat;
+
+	glUniformMatrix4fv(modelview_loc, 1, GL_FALSE, glm::value_ptr(modelview_mat));
+	glUniformMatrix4fv(projection_loc, 1, GL_FALSE, glm::value_ptr(perspective_mat));
+
+	glBindBuffer(GL_ARRAY_BUFFER, glew_vbo[0]);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(0);
+
+	// Draw triangles made of 36 vertices (the cube we created) starting from vertex 0.
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	*/
+
+
+	// Draw the pyramid.
+
+	model_mat = glm::translate(
+		glm::mat4(1.0f),
+		glm::vec3(pyramid_pos_x, pyramid_pos_y, pyramid_pos_z));
 
 	modelview_mat = model_mat * view_mat;
 
@@ -196,32 +247,13 @@ void display(GLFWwindow* window, double delta_time) {
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
 
-	// Adjust OpenGL settings to enable HSR with the specific
-	// depth testing to use.
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);
-
-	// Set winding order for back-face culling.
-	// The cube vertices have clockwise winding order.
-	glFrontFace(GL_CW);
-
-	// Draw triangles made of 36 vertices (the cube we created) starting from vertex 0.
-	glDrawArrays(GL_TRIANGLES, 0, 36);
-
-
-	// Draw pyramid
-	model_mat = glm::translate(
-		glm::mat4(1.0f),
-		glm::vec3(pyramid_pos_x, pyramid_pos_y, pyramid_pos_z));
-
-	modelview_mat = model_mat * view_mat;
-
-	glUniformMatrix4fv(modelview_loc, 1, GL_FALSE, glm::value_ptr(modelview_mat));
-	glUniformMatrix4fv(projection_loc, 1, GL_FALSE, glm::value_ptr(perspective_mat));
-
+	// Draw the texture on the pyramid.
 	glBindBuffer(GL_ARRAY_BUFFER, glew_vbo[1]);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(1);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, pyramid_texture);
 
 	// Set winding order for back-face culling.
 	// The pyramid vertices have counter-clockwise winding order.
@@ -229,6 +261,7 @@ void display(GLFWwindow* window, double delta_time) {
 
 	// Draw triangles made of 18 vertices (the pyramid we created) starting from vertex 0.
 	glDrawArrays(GL_TRIANGLES, 0, 18);
+
 }
 
 // Rebuilds the perspective matrix according to the new window sizes.

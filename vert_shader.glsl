@@ -1,13 +1,14 @@
 #version 450
 
 layout (location=0) in vec3 position;
+layout (location=1) in vec2 texture_coords;
 
-// now modelview matrix is united
 uniform mat4 modelview_matrix;
 uniform mat4 projection_matrix;
 
-out vec4 varying_colors; // color gradient based on the pixels location
+out vec2 texture_pixels;
 
+layout (binding=0) uniform sampler2D texture_sampler;
 
 /*
  * in -> the elements will receives values from the buffer
@@ -16,13 +17,5 @@ out vec4 varying_colors; // color gradient based on the pixels location
 */
 void main() { 
 	gl_Position = projection_matrix * modelview_matrix * vec4(position, 1.0);
-	varying_colors = vec4(position, 1.0) * 0.5 + vec4(0.5, 0.5, 0.5, 0.5);
-	// multiplying the location by 0.5 and adding 0.5 converts the range of values
-	// from [-1,1] to[0,1]
+	texture_pixels = texture_coords;
 }
-// The multiplication applies the matrix transforms to the vertex, converting it to
-// camera space. Those values are put in the built-in OpenGL output variable gl_Position
-// and the proceed through the pipeline and are interpolated by the rasterizer.
-// The interpolated pixel locations (fragments), are then sent to the fragment shader
-// which sets the color of an outputted pixel. The fragment shader processes the pixels
-// one by one (with a separate invocation for each pixel).
