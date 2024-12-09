@@ -224,6 +224,27 @@ GLuint load_texture(const char* texture_file) {
 		texture_file,
 		SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_INVERT_Y);
 
+	// Sets the mipmap level to trilinear filtering.
+	// This makes up for distortion artifcats caused by the fact
+	// that texture image's resolutions rarely matches that of the region 
+	// in the scene being texture.
+	glBindTexture(GL_TEXTURE_2D, texture_id); // makes the texture passed active
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	// Sets the anisotropic filtering, which is different from standard
+	// mipmapping because it also supports rectangular resolutions,
+	// whereas standard mipmapping only supports squared resolutions (256x256 ecc...).
+	// It is used to view at various angles while retaining as much detail in the texture as possible.
+	// The anisotropic filtering is not a required part of OpenGL,
+	// but an extension, so first we must check if our graphhics card
+	// supports it.
+	if (glewIsSupported("GL_EXT_texture_filter_anisotropic")) {
+		GLfloat anisotropic_setting = 0.0f;
+		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &anisotropic_setting); // maximum degree of sampling supported
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, anisotropic_setting); // being applied to the active texture object
+	}
+
 	if (texture_id == 0) {
 		std::cout << "Could not find texture file " << texture_file << "! \n";
 	}

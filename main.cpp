@@ -24,8 +24,9 @@ GLuint glew_vao[GLEW_VAO_NUMS]; // Vertex Array Object
 GLuint glew_vbo[GLEW_VBO_NUMS]; // Vertex Buffer Object
 
 float camera_x, camera_y, camera_z;
-float cube_pos_x, cube_pos_y, cube_pos_z;
 float pyramid_pos_x, pyramid_pos_y, pyramid_pos_z;
+
+GLuint pyramid_texture;
 
 // Allocates variables used in display(), so that they won't need
 // to be allocated during rendering.
@@ -33,8 +34,6 @@ GLuint projection_loc, modelview_loc;
 glm::mat4 view_mat, model_mat, perspective_mat, modelview_mat;
 int width, height;
 float aspect_ratio;
-
-GLuint pyramid_texture;
 /* ----------------------------------------------------------------- */
 
 
@@ -52,29 +51,6 @@ void window_reshape_perspective_matrix_CALLBACK(GLFWwindow* window, int new_widt
 
 // Sets up the vertices of the objects.
 void setup_vertices() {
-
-	// We have 6 cube faces, so 12 triangles.
-	// Each triangle is 3 vertices, so 3 x 12 = 36 vertices.
-	// Each vertex has 3 values (X, Y, Z), so 3 x 36 = 108 vertices positions.
-	// Obviously the triangles have vertices in common, but we are sending
-	// each triangle's vertices down the pipeline separately, so we 
-	// specify them separately.
-	// In the cube, (0, 0, 0) is the center, and the corners range from
-	// -1.0 to 1.0
-	float cube_vertices_pos[108] = {
-		-1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f,
-		1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f,
-		1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, -1.0f,
-		1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f,
-		1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-		-1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-		-1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f,
-		-1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f,
-		-1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f,
-		1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,
-		-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f,
-		1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f
-	};
 
 	// We have one square base and 4 faces.
 	// So 1 square = 2 triangles. Plus the 4 triangles of the faces.
@@ -130,11 +106,6 @@ void init(GLFWwindow* window) {
 	camera_y = 0.0f;
 	camera_z = 12.0f;
 
-	// Setup cube position.
-	cube_pos_x = 0.0f;
-	cube_pos_y = -2.5f; // shift down Y to reveal perspective
-	cube_pos_z = 0.0f;
-
 	// Setup pyramid position.
 	pyramid_pos_x = 3.0f;
 	pyramid_pos_y = -2.5f; // shift down Y to reveal perspective
@@ -153,6 +124,7 @@ void init(GLFWwindow* window) {
 		1000.0f); // 1000.0f is the far clipping plane
 
 	pyramid_texture = myutils::load_texture("brick1.jpg");
+
 }
 
 void display(GLFWwindow* window, double delta_time) {
@@ -166,9 +138,6 @@ void display(GLFWwindow* window, double delta_time) {
 
 	glClearColor(1.0, 1.0, 1.0, 1.0); // set the color to be applied when clearing background
 	glClear(GL_COLOR_BUFFER_BIT); // fill the color buffer with the color we specified above
-
-	// Try removing the glClear(GL_COLOR_BUFFER_BIT) call
-	// above and see the results!
 
 	// Enable shaders, installing the GLSL code
 	// on the GPU. It doesn't run the shader program,
@@ -189,44 +158,12 @@ void display(GLFWwindow* window, double delta_time) {
 	projection_loc = glGetUniformLocation(glew_rendering_program, "projection_matrix");
 	modelview_loc = glGetUniformLocation(glew_rendering_program, "modelview_matrix");
 
-	// We are no longer building the perspective matrix
-	// for every frame, because we don't need it, except for
-	// when resizing the window.
-	// The perspective matrix build was moved to init().
-
 	// View matrix is always the same regardless of the object
 	// but we still need it to build it for every frame 
 	// (in the future it will become useful).
 	view_mat = glm::translate(
 		glm::mat4(1.0f) /* identity matrix*/,
 		glm::vec3(-camera_x, -camera_y, -camera_z));
-
-
-	/*
-	// Draw the cube.
-	
-	// Set winding order for back-face culling.
-	// The cube vertices have clockwise winding order.
-	glFrontFace(GL_CW);
-
-	// Model matrix and consequently modelview matrix change
-	// as the object to draw changes.
-	model_mat = glm::translate(
-		glm::mat4(1.0f),
-		glm::vec3(cube_pos_x, cube_pos_y, cube_pos_z));
-
-	modelview_mat = model_mat * view_mat;
-
-	glUniformMatrix4fv(modelview_loc, 1, GL_FALSE, glm::value_ptr(modelview_mat));
-	glUniformMatrix4fv(projection_loc, 1, GL_FALSE, glm::value_ptr(perspective_mat));
-
-	glBindBuffer(GL_ARRAY_BUFFER, glew_vbo[0]);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(0);
-
-	// Draw triangles made of 36 vertices (the cube we created) starting from vertex 0.
-	glDrawArrays(GL_TRIANGLES, 0, 36);
-	*/
 
 
 	// Draw the pyramid.
